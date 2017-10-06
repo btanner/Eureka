@@ -21,7 +21,6 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
-
 import Foundation
 
 /// The delegate of the Eureka sections.
@@ -32,7 +31,6 @@ public protocol SectionDelegate: class {
 }
 
 // MARK: Section
-
 extension Section : Equatable {}
 
 public func == (lhs: Section, rhs: Section) -> Bool {
@@ -42,7 +40,7 @@ public func == (lhs: Section, rhs: Section) -> Bool {
 extension Section : Hidable, SectionDelegate {}
 
 extension Section {
-
+    
     public func reload(with rowAnimation: UITableViewRowAnimation = .none) {
         guard let tableView = (form?.delegate as? FormViewController)?.tableView, let index = index else { return }
         tableView.reloadSections(IndexSet(integer: index), with: rowAnimation)
@@ -50,29 +48,29 @@ extension Section {
 }
 
 extension Section {
-
+    
     internal class KVOWrapper: NSObject {
-
+        
         dynamic private var _rows = NSMutableArray()
         var rows: NSMutableArray {
             return mutableArrayValue(forKey: "_rows")
         }
         var _allRows = [BaseRow]()
-
+        
         private weak var section: Section?
-
+        
         init(section: Section) {
             self.section = section
             super.init()
             addObserver(self, forKeyPath: "_rows", options: NSKeyValueObservingOptions.new.union(.old), context:nil)
         }
-
+        
         deinit {
             removeObserver(self, forKeyPath: "_rows")
             _rows.removeAllObjects()
             _allRows.removeAll()
         }
-
+        
         public override func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey : Any]?, context: UnsafeMutableRawPointer?) {
             let newRows = change![NSKeyValueChangeKey.newKey] as? [BaseRow] ?? []
             let oldRows = change![NSKeyValueChangeKey.oldKey] as? [BaseRow] ?? []
@@ -106,7 +104,7 @@ extension Section {
             }
         }
     }
-
+    
     /**
      *  If this section contains a row (hidden or not) with the passed parameter as tag then that row will be returned.
      *  If not, it returns nil.
@@ -119,78 +117,77 @@ extension Section {
 
 /// The class representing the sections in a Eureka form.
 open class Section {
-
+    
     /// The tag is used to uniquely identify a Section. Must be unique among sections and rows.
     public var tag: String?
-
+    
     /// The form that contains this section
     public internal(set) weak var form: Form?
-
+    
     /// The header of this section.
     public var header: HeaderFooterViewRepresentable? {
         willSet {
             headerView = nil
         }
     }
-
+    
     /// The footer of this section
     public var footer: HeaderFooterViewRepresentable? {
         willSet {
             footerView = nil
         }
     }
-
+    
     /// Index of this section in the form it belongs to.
     public var index: Int? { return form?.index(of: self) }
-
+    
     /// Condition that determines if the section should be hidden or not.
     public var hidden: Condition? {
         willSet { removeFromRowObservers() }
         didSet { addToRowObservers() }
     }
-
+    
     /// Returns if the section is currently hidden or not
     public var isHidden: Bool { return hiddenCache }
-
+    
     public required init() {}
-
+    
     public init(_ initializer: (Section) -> Void) {
         initializer(self)
     }
-
+    
     public init(_ header: String, _ initializer: (Section) -> Void = { _ in }) {
         self.header = HeaderFooterView(stringLiteral: header)
         initializer(self)
     }
-
+    
     public init(header: String, footer: String, _ initializer: (Section) -> Void = { _ in }) {
         self.header = HeaderFooterView(stringLiteral: header)
         self.footer = HeaderFooterView(stringLiteral: footer)
         initializer(self)
     }
-
+    
     public init(footer: String, _ initializer: (Section) -> Void = { _ in }) {
         self.footer = HeaderFooterView(stringLiteral: footer)
         initializer(self)
     }
-
+    
     // MARK: SectionDelegate
-
     /**
      *  Delegate method called by the framework when one or more rows have been added to the section.
      */
     open func rowsHaveBeenAdded(_ rows: [BaseRow], at: IndexSet) {}
-
+    
     /**
      *  Delegate method called by the framework when one or more rows have been removed from the section.
      */
     open func rowsHaveBeenRemoved(_ rows: [BaseRow], at: IndexSet) {}
-
+    
     /**
      *  Delegate method called by the framework when one or more rows have been replaced in the section.
      */
     open func rowsHaveBeenReplaced(oldRows: [BaseRow], newRows: [BaseRow], at: IndexSet) {}
-
+    
     // MARK: Private
     lazy var kvoWrapper: KVOWrapper = { [unowned self] in return KVOWrapper(section: self) }()
     
@@ -200,9 +197,8 @@ open class Section {
 }
 
 extension Section : MutableCollection, BidirectionalCollection {
-
+    
     // MARK: MutableCollectionType
-
     public var startIndex: Int { return 0 }
     public var endIndex: Int { return kvoWrapper.rows.count }
     public subscript (position: Int) -> BaseRow {
@@ -216,7 +212,7 @@ extension Section : MutableCollection, BidirectionalCollection {
             if position > kvoWrapper.rows.count {
                 assertionFailure("Section: Index out of bounds")
             }
-
+            
             if position < kvoWrapper.rows.count {
                 let oldRow = kvoWrapper.rows[position]
                 let oldRowIndex = kvoWrapper._allRows.index(of: oldRow as! BaseRow)!
@@ -226,34 +222,41 @@ extension Section : MutableCollection, BidirectionalCollection {
             } else {
                 kvoWrapper._allRows.append(newValue)
             }
-
+            
             kvoWrapper.rows[position] = newValue
             newValue.wasAddedTo(section: self)
         }
     }
-
-    public subscript (range: Range<Int>) -> [BaseRow] {
-        get { return kvoWrapper.rows.objects(at: IndexSet(integersIn: range)) as! [BaseRow] }
+    
+    public subscript (range: Range<Int>) -> ArraySlice<BaseRow> {
+        get { return kvoWrapper.rows.map({ $0 as! BaseRow })[range.lowerBound...range.upperBound] }
         set {
             replaceSubrange(range, with: newValue)
         }
     }
-
+    
     public func index(after i: Int) -> Int {return i + 1}
     public func index(before i: Int) -> Int {return i - 1}
-
+    
 }
 
+/// To add `RangeReplaceableCollection` conformance to your custom collection,
+/// add an empty initializer and the `replaceSubrange(_:with:)` method to your
+/// custom type. `RangeReplaceableCollection` provides default implementations
+/// of all its other methods using this initializer and method. For example,
+/// the `removeSubrange(_:)` method is implemented by calling
+/// `replaceSubrange(_:with:)` with an empty collection for the `newElements`
+/// parameter. You can override any of the protocol's required methods to
+/// provide your own custom implementation.
 extension Section : RangeReplaceableCollection {
-
+    
     // MARK: RangeReplaceableCollectionType
-
     public func append(_ formRow: BaseRow) {
         kvoWrapper.rows.insert(formRow, at: kvoWrapper.rows.count)
         kvoWrapper._allRows.append(formRow)
         formRow.wasAddedTo(section: self)
     }
-
+    
     public func append<S: Sequence>(contentsOf newElements: S) where S.Iterator.Element == BaseRow {
         kvoWrapper.rows.addObjects(from: newElements.map { $0 })
         kvoWrapper._allRows.append(contentsOf: newElements)
@@ -261,24 +264,43 @@ extension Section : RangeReplaceableCollection {
             row.wasAddedTo(section: self)
         }
     }
-
-    public func replaceSubrange<C: Collection>(_ subRange: Range<Int>, with newElements: C) where C.Iterator.Element == BaseRow {
-        for i in subRange.lowerBound..<subRange.upperBound {
+    
+    #if swift(>=3.2)
+    public func replaceSubrange<C>(_ subrange: Range<Int>, with newElements: C) where C : Collection, C.Element == BaseRow {
+        for i in subrange.lowerBound..<subrange.upperBound {
             if let row = kvoWrapper.rows.object(at: i) as? BaseRow {
                 row.willBeRemovedFromSection()
                 kvoWrapper._allRows.remove(at: kvoWrapper._allRows.index(of: row)!)
             }
         }
-
-        kvoWrapper.rows.replaceObjects(in: NSRange(location: subRange.lowerBound, length: subRange.upperBound - subRange.lowerBound),
-                                       withObjectsFrom: newElements.map { $0 })
-
-        kvoWrapper._allRows.insert(contentsOf: newElements, at: indexForInsertion(at: subRange.lowerBound))
+        
+        let range = NSRange(location: subrange.lowerBound, length: subrange.upperBound - subrange.lowerBound)
+        kvoWrapper.rows.replaceObjects(in: range, withObjectsFrom: newElements.map { $0 })
+        
+        kvoWrapper._allRows.insert(contentsOf: newElements, at: indexForInsertion(at: subrange.lowerBound))
         for row in newElements {
             row.wasAddedTo(section: self)
         }
     }
-
+    #else
+    public func replaceSubrange<C>(_ subrange: Range<Index>, with newElements: C) where C : Collection, C.Iterator.Element == Iterator.Element {
+    for i in subrange.lowerBound..<subrange.upperBound {
+    if let row = kvoWrapper.rows.object(at: i) as? BaseRow {
+    row.willBeRemovedFromSection()
+    kvoWrapper._allRows.remove(at: kvoWrapper._allRows.index(of: row)!)
+    }
+    }
+    
+    let range = NSRange(location: subrange.lowerBound, length: subrange.upperBound - subrange.lowerBound)
+    kvoWrapper.rows.replaceObjects(in: range, withObjectsFrom: newElements.map { $0 })
+    
+    kvoWrapper._allRows.insert(contentsOf: newElements, at: indexForInsertion(at: subrange.lowerBound))
+    for row in newElements {
+    row.wasAddedTo(section: self)
+    }
+    }
+    #endif
+    
     public func removeAll(keepingCapacity keepCapacity: Bool = false) {
         // not doing anything with capacity
         for row in kvoWrapper._allRows {
@@ -287,7 +309,7 @@ extension Section : RangeReplaceableCollection {
         kvoWrapper.rows.removeAllObjects()
         kvoWrapper._allRows.removeAll()
     }
-
+    
     @discardableResult
     public func remove(at position: Int) -> BaseRow {
         let row = kvoWrapper.rows.object(at: position) as! BaseRow
@@ -296,13 +318,13 @@ extension Section : RangeReplaceableCollection {
         if let index = kvoWrapper._allRows.index(of: row) {
             kvoWrapper._allRows.remove(at: index)
         }
-
+        
         return row
     }
-
+    
     private func indexForInsertion(at index: Int) -> Int {
         guard index != 0 else { return 0 }
-
+        
         let row = kvoWrapper.rows[index-1]
         if let i = kvoWrapper._allRows.index(of: row as! BaseRow) {
             return i + 1
@@ -312,9 +334,8 @@ extension Section : RangeReplaceableCollection {
 }
 
 extension Section /* Condition */{
-
+    
     // MARK: Hidden/Disable Engine
-
     /**
      Function that evaluates if the section should be hidden and updates it accordingly.
      */
@@ -333,7 +354,7 @@ extension Section /* Condition */{
             }
         }
     }
-
+    
     /**
      Internal function called when this section was added to a form.
      */
@@ -345,7 +366,7 @@ extension Section /* Condition */{
             row.wasAddedTo(section: self)
         }
     }
-
+    
     /**
      Internal function called to add this section to the observers of certain rows. Called when the hidden variable is set and depends on other rows.
      */
@@ -358,7 +379,7 @@ extension Section /* Condition */{
             form?.addRowObservers(to: self, rowTags: predicate.predicateVars, type: .hidden)
         }
     }
-
+    
     /**
      Internal function called when this section was removed from a form.
      */
@@ -369,7 +390,7 @@ extension Section /* Condition */{
         removeFromRowObservers()
         self.form = nil
     }
-
+    
     /**
      Internal function called to remove this section from the observers of certain rows. Called when the hidden variable is changed.
      */
@@ -382,13 +403,13 @@ extension Section /* Condition */{
             form?.removeRowObservers(from: self, rowTags: predicate.predicateVars, type: .hidden)
         }
     }
-
+    
     func hide(row: BaseRow) {
         row.baseCell.cellResignFirstResponder()
         (row as? BaseInlineRowType)?.collapseInlineRow()
         kvoWrapper.rows.remove(row)
     }
-
+    
     func show(row: BaseRow) {
         guard !kvoWrapper.rows.contains(row) else { return }
         guard var index = kvoWrapper._allRows.index(of: row) else { return }
@@ -406,23 +427,23 @@ extension Section /* Condition */{
  *  Navigation options for a form view controller.
  */
 public struct MultivaluedOptions: OptionSet {
-
+    
     private enum Options: Int {
         case none = 0, insert = 1, delete = 2, reorder = 4
     }
     public let rawValue: Int
     public  init(rawValue: Int) { self.rawValue = rawValue}
     private init(_ options: Options) { self.rawValue = options.rawValue }
-
+    
     /// No multivalued.
     public static let None = MultivaluedOptions(.none)
-
+    
     /// Allows user to insert rows.
     public static let Insert = MultivaluedOptions(.insert)
-
+    
     /// Allows user to delete rows.
     public static let Delete = MultivaluedOptions(.delete)
-
+    
     /// Allows user to reorder rows
     public static let Reorder = MultivaluedOptions(.reorder)
 }
@@ -431,24 +452,24 @@ public struct MultivaluedOptions: OptionSet {
  *  Multivalued sections allows us to easily create insertable, deletable and reorderable sections. By using a multivalued section we can add multiple values for a certain field, such as telephone numbers in a contact.
  */
 open class MultivaluedSection: Section {
-
+    
     public var multivaluedOptions: MultivaluedOptions
     public var showInsertIconInAddButton = true
     public var addButtonProvider: ((MultivaluedSection) -> ButtonRow) = { _ in
         return ButtonRow {
             $0.title = "Add"
             $0.cellStyle = .value1
-        }.cellUpdate { cell, _ in
-            cell.textLabel?.textAlignment = .left
+            }.cellUpdate { cell, _ in
+                cell.textLabel?.textAlignment = .left
         }
     }
-
+    
     public var multivaluedRowToInsertAt: ((Int) -> BaseRow)?
-
+    
     public required init(multivaluedOptions: MultivaluedOptions = MultivaluedOptions.Insert.union(.Delete),
-                header: String = "",
-                footer: String = "",
-                _ initializer: (MultivaluedSection) -> Void = { _ in }) {
+                         header: String = "",
+                         footer: String = "",
+                         _ initializer: (MultivaluedSection) -> Void = { _ in }) {
         self.multivaluedOptions = multivaluedOptions
         super.init(header: header, footer: footer, {section in initializer(section as! MultivaluedSection) })
         guard multivaluedOptions.contains(.Insert) else { return }
@@ -459,7 +480,7 @@ open class MultivaluedSection: Section {
         }
         self <<< addRow
     }
-
+    
     public required init() {
         self.multivaluedOptions = MultivaluedOptions.Insert.union(.Delete)
         super.init()
