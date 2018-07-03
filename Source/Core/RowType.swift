@@ -204,6 +204,16 @@ extension RowType where Self: BaseRow {
         callbackOnChange = { [unowned self] in callback(self) }
         return self
     }
+    
+    /**
+     BT FOR FPS
+     */
+    @discardableResult
+    public func onVisChange(_ callback: @escaping (Self) -> Void) -> Self {
+        callbackOnVisChange = { [unowned self] in callback(self) }
+        return self
+    }
+    
 
     /**
      Sets a block to be called when the cell corresponding to this row is refreshed.

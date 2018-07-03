@@ -26,6 +26,8 @@ import Foundation
 
 open class BaseRow: BaseRowType {
 
+    //BT for FPS
+    var callbackOnVisChange: (()->Void)?
     var callbackOnChange: (() -> Void)?
     var callbackCellUpdate: (() -> Void)?
     var callbackCellSetup: Any?
@@ -140,7 +142,13 @@ open class BaseRow: BaseRowType {
         return IndexPath(row: rowIndex, section: sectionIndex)
     }
 
-    var hiddenCache = false
+    //BT for FPS
+    var hiddenCache : Bool = false{
+        didSet{
+            callbackOnVisChange?()
+        }
+    }
+
     var disabledCache = false {
         willSet {
             if newValue && !disabledCache {
