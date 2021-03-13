@@ -23,8 +23,10 @@
 // THE SOFTWARE.
 
 import Foundation
+import UIKit
 
 /// Base class for the Eureka cells
+@objc(EurekaBaseCell)
 open class BaseCell: UITableViewCell, BaseCellType {
 
     /// Untyped row associated to this cell.
@@ -37,7 +39,7 @@ open class BaseCell: UITableViewCell, BaseCellType {
         super.init(coder: aDecoder)
     }
 
-    public required override init(style: UITableViewCellStyle, reuseIdentifier: String?) {
+    public required override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
     }
 
@@ -106,7 +108,7 @@ open class Cell<T>: BaseCell, TypedCellType where T: Equatable {
         super.init(coder: aDecoder)
     }
 
-    required public init(style: UITableViewCellStyle, reuseIdentifier: String?) {
+    required public init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
     }
 
@@ -123,7 +125,11 @@ open class Cell<T>: BaseCell, TypedCellType where T: Equatable {
     open override func update() {
         super.update()
         textLabel?.text = row.title
-        textLabel?.textColor = row.isDisabled ? .gray : .black
+        if #available(iOS 13.0, *) {
+            textLabel?.textColor = row.isDisabled ? .tertiaryLabel : .label
+        } else {
+            textLabel?.textColor = row.isDisabled ? .gray : .black
+        }
         detailTextLabel?.text = row.displayValueFor?(row.value) ?? (row as? NoValueDisplayTextConformance)?.noValueDisplayText
     }
 

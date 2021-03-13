@@ -44,6 +44,18 @@ class MultivaluedSectionTests: XCTestCase {
         super.tearDown()
     }
 
+    func testHeaders() {
+        let headerSection = MultivaluedSection(multivaluedOptions: .Insert, header: "Header Text", footer: nil) { _ in }
+        XCTAssertEqual(headerSection.header!.title, "Header Text")
+        XCTAssertNil(headerSection.footer)
+    }
+
+    func testFooters() {
+        let footerSection = MultivaluedSection(multivaluedOptions: .Insert, header: nil, footer: "Footer Text") { _ in }
+        XCTAssertEqual(footerSection.footer!.title, "Footer Text")
+        XCTAssertNil(footerSection.header)
+    }
+
     func testAddButton() {
         let section = MultivaluedSection(multivaluedOptions: .Insert, header: "", footer: "") { _ in
             // just an empty closure
@@ -78,13 +90,13 @@ class MultivaluedSectionTests: XCTestCase {
         XCTAssertFalse(formVC.tableView(formVC.tableView, canEditRowAt: IndexPath(item: 0, section: 1)))
 
         // editingStyleForRowAt
-        XCTAssertEqual(formVC.tableView(formVC.tableView, editingStyleForRowAt: IndexPath(item: 1, section: 0)), UITableViewCellEditingStyle.insert)
-        XCTAssertEqual(formVC.tableView(formVC.tableView, editingStyleForRowAt: IndexPath(item: 0, section: 0)), UITableViewCellEditingStyle.none)
-        XCTAssertEqual(formVC.tableView(formVC.tableView, editingStyleForRowAt: IndexPath(item: 0, section: 1)), UITableViewCellEditingStyle.none)
+        XCTAssertEqual(formVC.tableView(formVC.tableView, editingStyleForRowAt: IndexPath(item: 1, section: 0)), UITableViewCell.EditingStyle.insert)
+        XCTAssertEqual(formVC.tableView(formVC.tableView, editingStyleForRowAt: IndexPath(item: 0, section: 0)), UITableViewCell.EditingStyle.none)
+        XCTAssertEqual(formVC.tableView(formVC.tableView, editingStyleForRowAt: IndexPath(item: 0, section: 1)), UITableViewCell.EditingStyle.none)
 
         form +++ MultivaluedSection(multivaluedOptions: .Delete, header: "", footer: "") { _ in } <<< TextRow()
 
-        XCTAssertEqual(formVC.tableView(formVC.tableView, editingStyleForRowAt: IndexPath(item: 0, section: 2)), UITableViewCellEditingStyle.delete)
+        XCTAssertEqual(formVC.tableView(formVC.tableView, editingStyleForRowAt: IndexPath(item: 0, section: 2)), UITableViewCell.EditingStyle.delete)
 
         // shouldIndentWhileEditingRowAt
         XCTAssertFalse(formVC.tableView(formVC.tableView, shouldIndentWhileEditingRowAt: IndexPath(item: 0, section: 0)))
